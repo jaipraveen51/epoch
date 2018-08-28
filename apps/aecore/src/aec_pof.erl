@@ -52,14 +52,8 @@ deserialize_from_binary(PoFBin) when is_binary(PoFBin) ->
           ?POF_VSN,
           serialization_template(?POF_VSN),
           PoFBin),
-    case {aec_headers:deserialize_from_binary(SerializedHdr),
-          aec_headers:deserialize_from_binary(SerializedFraudHdr)} of
-        {{ok, Header}, {ok, FraudHeader}} ->
-            #{header => Header,
-              fraud_header => FraudHeader};
-        {_, _} = Err ->
-            Err
-    end.
+    #{header       => aec_headers:deserialize_from_binary(SerializedHdr),
+      fraud_header => aec_headers:deserialize_from_binary(SerializedFraudHdr)}.
 
 %%%===================================================================
 %%% Getters
