@@ -26,6 +26,9 @@
 
 -define(POF_VSN, 1).
 
+-type pof() :: 'no_fraud' | map().
+-export_type([pof/0]).
+
 new(Header, FraudHeader) ->
     #{header => Header, fraud_header => FraudHeader}.
 

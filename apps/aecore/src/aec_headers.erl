@@ -67,7 +67,7 @@
           root_hash    = <<0:?STATE_HASH_BYTES/unit:8>>        :: state_hash(),
           signature    = <<0:?BLOCK_SIGNATURE_BYTES/unit:8>>   :: block_signature(),
           txs_hash     = <<0:?TXS_HASH_BYTES/unit:8>>          :: txs_hash(),
-          pof          = no_fraud                              :: no_fraud | tuple(),
+          pof          = no_fraud                              :: aec_pof:pof(),
           time         = ?GENESIS_TIME                         :: non_neg_integer(),
           version                                              :: non_neg_integer()
          }).
