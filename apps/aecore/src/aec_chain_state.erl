@@ -263,9 +263,6 @@ wrap_header(Header) ->
         , type = BlockType
     }.
 
-set_fraud_status(micro, Header) -> aec_headers:pof(Header);
-set_fraud_status(key, _) -> no_fraud.
-
 export_header(#node{header = Header}) ->
     Header.
 
