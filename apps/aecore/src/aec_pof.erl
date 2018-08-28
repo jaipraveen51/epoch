@@ -27,10 +27,10 @@
 -define(POF_VSN, 1).
 
 new(Header, FraudHeader) ->
-    {Header, FraudHeader}.
+    #{header => Header, fraud_header => FraudHeader}.
 
-serialize({header = Header,
-           fraud_header = FraudHeader}) ->
+serialize(#{header := Header,
+           fraud_header := FraudHeader}) ->
     {version(),
      [ {header, Header}
      , {fraud_header, FraudHeader}]}.
@@ -38,8 +38,8 @@ serialize({header = Header,
 deserialize(?POF_VSN,
             [ {header, Header}
             , {fraud_header, FraudHeader}]) ->
-    {header = Header,
-     fraud_header = FraudHeader}.
+    #{header => Header,
+      fraud_header => FraudHeader}.
 
 serialization_template(?POF_VSN) ->
     [ {header, binary}
@@ -49,21 +49,21 @@ serialization_template(?POF_VSN) ->
 %%% Getters
 %%%===================================================================
 
--spec header(tuple()) -> aec_id:header().
-header({header = Header, _}) ->
+-spec header(map()) -> aec_id:header().
+header(#{header := Header}) ->
     Header.
 
--spec fraud_header(tuple()) -> aec_id:header().
-fraud_header({_, fraud_header = FraudHeader}) ->
+-spec fraud_header(map()) -> aec_id:header().
+fraud_header(#{fraud_header := FraudHeader}) ->
     FraudHeader.
 
 %%%===================================================================
 %%% Validation
 %%%===================================================================
 
--spec check_fraud_headers(tuple(), aec_trees:trees()) ->
+-spec check_fraud_headers(map(), aec_trees:trees()) ->
                                  ok | {error, term()}.
-check_fraud_headers({header = _Header, fraud_header = _FraudHeader} = _Tx,
+check_fraud_headers(#{header := _Header, fraud_header := _FraudHeader} = _Tx,
                     _Trees) ->
     %% TODO:
     %% 1. deserialize header
