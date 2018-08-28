@@ -10,8 +10,7 @@
 -include("blocks.hrl").
 
 %% Behavior API
--export([new/1,
-         check/5,
+-export([new/2,
          serialization_template/1,
          serialize/1,
          deserialize/2
@@ -21,48 +20,17 @@
 -export([header/1,
          fraud_header/1]).
 
-%%%===================================================================
-%%% Types
-%%%===================================================================
+%% Validators
+-export([check_fraud_headers/2]).
 
--record(pof, {
-          header       :: aec_id:headers(),
-          fraud_header :: aec_id:headers()}).
 
 -define(POF_VSN, 1).
 
--opaque pof() :: #pof{}.
--export_type([pof/0]).
+new(Header, FraudHeader) ->
+    {Header, FraudHeader}.
 
-%%%===================================================================
-%%% Behaviour API
-%%%===================================================================
-
--spec new(map()) -> {ok, pof()}.
-new(#{header       := Header,
-      fraud_header := FraudHeader}) when is_binary(Header),
-                                         is_binary(FraudHeader) ->
-    PoF = #pof{header      = Header,
-               fraud_header = FraudHeader},
-    {ok, PoF}.
-
--spec check(pof(), aetx:tx_context(), aec_trees:trees(), aec_blocks:height(), non_neg_integer()) ->
-                   {ok, aec_trees:trees()} | {error, term()}.
-check(#pof{} = PoFTx, _Context, Trees, Height, _ConsensusVersion) ->
-    Checks = [fun() -> check_height(PoFTx, Height) end,
-              fun() -> check_fraud_headers(PoFTx, Trees) end],
-
-    case aeu_validation:run(Checks) of
-        ok ->
-            ok;
-        {error, _Reason} = Error ->
-            Error
-    end.
-
-
-serialize(#pof{
-             header = Header,
-             fraud_header = FraudHeader}) ->
+serialize({header = Header,
+           fraud_header = FraudHeader}) ->
     {version(),
      [ {header, Header}
      , {fraud_header, FraudHeader}]}.
@@ -70,9 +38,8 @@ serialize(#pof{
 deserialize(?POF_VSN,
             [ {header, Header}
             , {fraud_header, FraudHeader}]) ->
-    #pof{
-       header = Header,
-       fraud_header = FraudHeader}.
+    {header = Header,
+     fraud_header = FraudHeader}.
 
 serialization_template(?POF_VSN) ->
     [ {header, binary}
@@ -82,25 +49,21 @@ serialization_template(?POF_VSN) ->
 %%% Getters
 %%%===================================================================
 
--spec header(pof()) -> aec_id:header().
-header(#pof{header = Header}) ->
+-spec header(tuple()) -> aec_id:header().
+header({header = Header, _}) ->
     Header.
 
--spec fraud_header(pof()) -> aec_id:header().
-fraud_header(#pof{fraud_header = FraudHeader}) ->
+-spec fraud_header(tuple()) -> aec_id:header().
+fraud_header({_, fraud_header = FraudHeader}) ->
     FraudHeader.
 
 %%%===================================================================
-%%% Internal functions
+%%% Validation
 %%%===================================================================
 
-check_height(_PoF, _Height) ->
-    %% TODO: deserialize and compare heights (must by off by one)
-    ok.
-
--spec check_fraud_headers(pof(), aec_trees:trees()) ->
+-spec check_fraud_headers(tuple(), aec_trees:trees()) ->
                                  ok | {error, term()}.
-check_fraud_headers(#pof{header = _Header, fraud_header = _FraudHeader} = _Tx,
+check_fraud_headers({header = _Header, fraud_header = _FraudHeader} = _Tx,
                     _Trees) ->
     %% TODO:
     %% 1. deserialize header
