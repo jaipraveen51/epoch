@@ -852,6 +852,19 @@ handle_add_block(Header, CheckFun, Block, State, Origin) ->
             case aec_validation:validate_block(Block) of
                 ok ->
                     case aec_chain_state:insert_block(Block) of
+                        ok ->
+                            maybe_publish_block(Origin, Block),
+                            case preempt_if_new_top(State, Origin) of
+                                no_change ->
+                                    {ok, State#state{pof = no_fraud}};
+                                {micro_changed, State1 = #state{ consensus = Cons }} ->
+                                    {ok, setup_loop(State1#state{pof = no_fraud}, false, Cons#consensus.leader, Origin)};
+                                {changed, NewTopBlock, State1} ->
+                                    IsLeader = is_leader(NewTopBlock),
+                                    %% Don't spend time when we are the leader.
+                                    [ aec_tx_pool:garbage_collect() || not IsLeader ],
+                                    {ok, setup_loop(State1#state{pof = no_fraud}, true, IsLeader, Origin)}
+                            end;
                         {ok, PoF} ->
                             maybe_publish_block(Origin, Block),
                             case preempt_if_new_top(State, Origin) of

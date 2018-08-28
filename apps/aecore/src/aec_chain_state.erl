@@ -60,22 +60,24 @@ median_timestamp(Header) ->
             end
     end.
 
--spec insert_block(aec_blocks:block() | map()) -> {'ok', no_fraud | tuple()} | {'error', any()}.
+-spec insert_block(aec_blocks:block() | map()) -> 'ok' | {'ok' | tuple()} | {'error', any()}.
 insert_block(#{ key_block := KeyBlock, micro_blocks := MicroBlocks, dir := forward }) ->
     %% First insert key_block
     case insert_block(KeyBlock) of
-        {ok, _FraudStatus} ->
-            lists:foldl(fun(MB, {ok, _}) -> insert_block(MB);
+        ok ->
+            lists:foldl(fun(MB, ok) -> insert_block(MB);
+                           (MB, {ok, _}) -> insert_block(MB);
                            (_MB, Err = {error, _}) -> Err
-                        end, {ok, no_fraud}, MicroBlocks);
+                        end, ok, MicroBlocks);
         Err = {error, _} ->
             Err
     end;
 insert_block(#{ key_block := KeyBlock, micro_blocks := MicroBlocks, dir := backward }) ->
     %% First insert micro_blocks
-    case lists:foldl(fun(MB, {ok, _}) -> insert_block(MB);
+    case lists:foldl(fun(MB, ok) -> insert_block(MB);
+                        (MB, {ok, _}) -> insert_block(MB);
                         (_MB, Err = {error, _}) -> Err
-                     end, {ok, no_fraud}, MicroBlocks) of
+                     end, ok, MicroBlocks) of
         ok ->
             insert_block(KeyBlock);
         Err = {error, _} ->
@@ -330,7 +332,10 @@ internal_insert(Node, Block) ->
                           end,
                           State2 = update_state_tree(Node, maybe_add_genesis_hash(State1, Node)),
                           persist_state(State2),
-                          {ok, maps:get(fraud_status, State2)}
+                          case maps:get(fraud_status, State2) of
+                              no_fraud     -> ok;
+                              FraudHeaders -> {ok, FraudHeaders}
+                          end
                   end,
             try aec_db:ensure_transaction(Fun)
             catch exit:{aborted, {throw, ?internal_error(What)}} -> internal_error(What)
