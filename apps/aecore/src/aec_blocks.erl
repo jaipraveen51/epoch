@@ -31,6 +31,7 @@
          set_miner/2,
          set_nonce/2,
          set_nonce_and_pow/3,
+         set_pof/2,
          set_prev_hash/2,
          set_root_hash/2,
          set_signature/2,
@@ -284,6 +285,10 @@ txs(Block) ->
 set_txs(Block, Txs) ->
     Block#mic_block{txs = Txs}.
 
+-spec set_pof(micro_block(), tuple()) -> micro_block().
+set_pof(Block, PoF) ->
+    set_header(Block, aec_headers:set_pof(to_micro_header(Block), PoF)).
+
 -spec txs_hash(micro_block()) -> binary().
 txs_hash(Block) ->
     aec_headers:txs_hash(to_micro_header(Block)).
@@ -407,7 +412,8 @@ validate_key_block(#key_block{} = Block) ->
 
 -spec validate_micro_block(micro_block()) -> 'ok' | {'error', {'header' | 'block', term()}}.
 validate_micro_block(#mic_block{} = Block) ->
-    Validators = [fun validate_txs_hash/1],
+    Validators = [fun validate_txs_hash/1,
+                  fun validate_pof/1],
     case aec_headers:validate_micro_block_header(to_micro_header(Block)) of
         ok ->
             case aeu_validation:run(Validators, [Block]) of
@@ -427,3 +433,7 @@ validate_txs_hash(#mic_block{txs = Txs} = Block) ->
         _Other ->
             {error, malformed_txs_hash}
     end.
+
+validate_pof(#mic_block{txs = _Txs} = _Block) ->
+    %% TODO
+    ok.

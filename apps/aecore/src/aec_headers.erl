@@ -24,6 +24,7 @@
          new_micro_header/6,
          nonce/1,
          pow/1,
+         pof/1,
          prev_hash/1,
          root_hash/1,
          serialize_pow_evidence/1,
@@ -34,6 +35,7 @@
          set_miner/2,
          set_nonce/2,
          set_nonce_and_pow/3,
+         set_pof/2,
          set_prev_hash/2,
          set_root_hash/2,
          set_signature/2,
@@ -65,6 +67,7 @@
           root_hash    = <<0:?STATE_HASH_BYTES/unit:8>>        :: state_hash(),
           signature    = <<0:?BLOCK_SIGNATURE_BYTES/unit:8>>   :: block_signature(),
           txs_hash     = <<0:?TXS_HASH_BYTES/unit:8>>          :: txs_hash(),
+          pof          = no_fraud                              :: no_fraud | tuple(),
           time         = ?GENESIS_TIME                         :: non_neg_integer(),
           version                                              :: non_neg_integer()
          }).
@@ -220,6 +223,12 @@ set_nonce(Header, Nonce) ->
 -spec set_prev_hash(header(), block_header_hash()) -> header().
 set_prev_hash(#key_header{} = H, Hash) -> H#key_header{prev_hash = Hash};
 set_prev_hash(#mic_header{} = H, Hash) -> H#mic_header{prev_hash = Hash}.
+
+-spec set_pof(micro_header(), tuple()) -> micro_header().
+set_pof(#mic_header{} = H, PoF) -> H#mic_header{pof = PoF}.
+
+-spec pof(micro_header()) -> tuple().
+pof(#mic_header{pof = PoF}) -> PoF.
 
 -spec pow(key_header()) -> aec_pow:pow_evidence().
 pow(#key_header{pow_evidence = Evd}) ->
