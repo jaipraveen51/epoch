@@ -257,7 +257,7 @@ fake_key_node(PrevNode, Height, Miner, Beneficiary) ->
 
 wrap_header(Header) ->
     {ok, Hash} = aec_headers:hash_header(Header),
-    BlockType = aec_header:type(Header),
+    BlockType = aec_headers:type(Header),
     #node{header = Header
         , hash = Hash
         , type = BlockType
