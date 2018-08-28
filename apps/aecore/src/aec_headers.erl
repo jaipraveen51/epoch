@@ -620,4 +620,4 @@ validate_max_time({Header, _}) ->
     end.
 
 validate_pof({Header, Ver}) ->
-    aec_pof:check_fraud_headers(Header, Ver).
+    aec_pof:check(Header, Ver).
