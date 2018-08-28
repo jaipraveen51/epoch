@@ -330,7 +330,7 @@ internal_insert(Node, Block) ->
                           end,
                           State2 = update_state_tree(Node, maybe_add_genesis_hash(State1, Node)),
                           persist_state(State2),
-                          {ok, maps:get(State, fraud_status)}
+                          {ok, maps:get(fraud_status, State2)}
                   end,
             try aec_db:ensure_transaction(Fun)
             catch exit:{aborted, {throw, ?internal_error(What)}} -> internal_error(What)
@@ -492,7 +492,7 @@ update_state_tree(Node, State) ->
         {ok, Trees, ForkInfoIn} ->
             {ForkInfo, HeadersDetails} =
                 case node_is_genesis(Node, State) of
-                    true  -> ForkInfoIn;
+                    true  -> {ForkInfoIn, []};
                     false ->
                         case db_sibling_blocks(Node) of
                             Headers when length(Headers) > 1 -> {ForkInfoIn#fork_info{fork_id = hash(Node)}, Headers};
