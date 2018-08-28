@@ -180,7 +180,6 @@ set_top_block_hash(H, State) when is_binary(H) -> State#{top_block_hash => H}.
 -record(node, { header           :: aec_headers:header()
               , hash             :: binary()
               , type             :: block_type()
-              , prev_gen_fraud   :: no_fraud | tuple()
               }).
 
 hash(#node{hash = Hash}) -> Hash.
@@ -207,6 +206,9 @@ node_beneficiary(#node{header = H}) -> aec_headers:beneficiary(H).
 node_type(#node{type = T}) -> T.
 
 node_time(#node{header = H}) -> aec_headers:time_in_msecs(H).
+
+node_pof(#node{type = key}) -> no_fraud;
+node_pof(#node{header = H}) -> aec_headers:pof(H).
 
 is_key_block(N) -> node_type(N) =:= key.
 
@@ -259,7 +261,6 @@ wrap_header(Header) ->
     #node{header = Header
         , hash = Hash
         , type = BlockType
-        , prev_gen_fraud = set_fraud_status(BlockType, Header)
     }.
 
 set_fraud_status(micro, Header) -> aec_headers:pof(Header);
@@ -326,7 +327,10 @@ internal_insert(Node, Block) ->
                           State1 = State#{fraud_status => no_fraud, currently_adding => hash(Node)},
                           assert_not_new_genesis(Node, State1),
                           ok = db_put_node(Block, hash(Node)),
-                          db_mark_malicious_leader(Node),
+                          case node_pof(Node) of
+                              no_fraud -> ok;
+                              _PoF -> db_mark_malicious_leader(Node)
+                          end,
                           State2 = update_state_tree(Node, maybe_add_genesis_hash(State1, Node)),
                           persist_state(State2),
                           {ok, maps:get(State, fraud_status)}
@@ -940,7 +944,6 @@ db_sibling_blocks(Node) ->
                    ++ aec_db:find_headers_at_height(OtherHeight),
                aec_headers:prev_hash(Header) =:= PrevHash].
 
-db_mark_malicious_leader(#node{prev_gen_fraud = no_fraud}) -> ok;
 db_mark_malicious_leader(#node{header = Header}) ->
     CurrentHeight = aec_headers:height(Header),
     {ok, MaliciousKeyBlock} = aec_chain:get_key_block_by_height(CurrentHeight-1),
