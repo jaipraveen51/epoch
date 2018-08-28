@@ -462,12 +462,7 @@ assert_micro_signature(PrevNode, Node, KeyHash) ->
                     key   -> {ok, PrevNode};
                     micro -> db_find_node(KeyHash)
                 end,
-            Bin = aec_headers:serialize_to_signature_binary(export_header(Node)),
-            Sig = node_signature(Node),
-            case enacl:sign_verify_detached(Sig, Bin, node_miner(KeyNode)) of
-                {ok, _}    -> ok;
-                {error, _} -> {error, signature_verification_failed}
-            end;
+            aeu_sig:verify(export_header(Node), node_miner(KeyNode));
         false ->
             ok
     end.
