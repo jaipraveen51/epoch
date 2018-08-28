@@ -10,10 +10,10 @@
 -include("blocks.hrl").
 
 %% Behavior API
--export([new/2,
+-export([deserialize_from_binary/1,
+         new/2,
          serialization_template/1,
-         serialize/1,
-         deserialize/2
+         serialize_to_binary/1
         ]).
 
 %% Getters
@@ -32,21 +32,34 @@
 new(Header, FraudHeader) ->
     #{header => Header, fraud_header => FraudHeader}.
 
-serialize(#{header := Header,
-           fraud_header := FraudHeader}) ->
-    {version(),
-     [ {header, Header}
-     , {fraud_header, FraudHeader}]}.
+-spec serialize_to_binary(map()) -> binary().
+serialize_to_binary(#{header       := Header,
+                      fraud_header := FraudHeader}) ->
+    SerializedHdr      = aec_headers:serialize_to_binary(Header),
+    SerializedFraudHdr = aec_headers:serialize_to_binary(FraudHeader),
+    aec_object_serialization:serialize(
+      pof,
+      ?POF_VSN,
+      serialization_template(?POF_VSN),
+      [{header, SerializedHdr}, {fraud_header, SerializedFraudHdr}]).
 
-deserialize(?POF_VSN,
-            [ {header, Header}
-            , {fraud_header, FraudHeader}]) ->
-    #{header => Header,
-      fraud_header => FraudHeader}.
-
-serialization_template(?POF_VSN) ->
-    [ {header, binary}
-    , {fraud_header, binary}].
+-spec deserialize_from_binary(binary()) -> {'ok', map()} | {'error', term()}.
+deserialize_from_binary(PoFBin) when is_binary(PoFBin) ->
+    [ {header, SerializedHdr}
+    , {fraud_header, SerializedFraudHdr}
+    ] = aec_object_serialization:deserialize(
+          pof,
+          ?POF_VSN,
+          serialization_template(?POF_VSN),
+          PoFBin),
+    case {aec_headers:deserialize_from_binary(SerializedHdr),
+          aec_headers:deserialize_from_binary(SerializedFraudHdr)} of
+        {{ok, Header}, {ok, FraudHeader}} ->
+            #{header => Header,
+              fraud_header => FraudHeader};
+        {_, _} = Err ->
+            Err
+    end.
 
 %%%===================================================================
 %%% Getters
@@ -78,5 +91,10 @@ check_fraud_headers(#{header := _Header, fraud_header := _FraudHeader} = _Tx,
     %% 7. check height - we can only punish before coinbase kicks in
     ok.
 
-version() ->
-    ?POF_VSN.
+%%%===================================================================
+%%% Internals
+%%%===================================================================
+
+serialization_template(?POF_VSN) ->
+    [ {header, binary}
+    , {fraud_header, binary}].
