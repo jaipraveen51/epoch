@@ -538,8 +538,9 @@ validate_micro_block_header(Header) ->
 
     Validators = [fun validate_version/1,
                   fun validate_micro_block_cycle_time/1,
-                  fun validate_max_time/1
-                 ],
+                  fun validate_max_time/1,
+                  fun validate_pof/1
+    ],
     aeu_validation:run(Validators, [{Header, ProtocolVersions}]).
 
 -spec validate_version({header(), aec_governance:protocols()}) ->
@@ -616,4 +617,21 @@ validate_max_time({Header, _}) ->
             ok;
         false ->
             {error, block_from_the_future}
+    end.
+
+validate_pof({#mic_header{pof = #{header := FraudHeader1,
+                                  fraud_header := FraudHeader2}} = Header, _Ver}) ->
+    case assert_siblings(FraudHeader1, FraudHeader2) of
+        ok -> aec_pof:check_fraud_headers(Header);
+        Err -> Err
+    end.
+
+assert_siblings(Header1, Header2) ->
+    Height1 = aec_headers:height(Header1),
+    Height2 = aec_headers:height(Header2),
+    Prev1 = aec_headers:prev_hash(Header1),
+    Prev2 = aec_headers:prev_hash(Header2),
+
+    if (Height1 =:= Height2) and (Prev1 =:= Prev2) -> ok;
+       true -> {error, not_syblings}
     end.

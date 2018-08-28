@@ -731,8 +731,7 @@ start_micro_signing(#state{consensus = #consensus{leader = true},
         false ->
             epoch_mining:info("Signing microblock"),
             AdjMicroBlock = aec_blocks:set_time_in_msecs(MicroBlock, aeu_time:now_in_msecs()),
-            AddPoFToBlock = aec_blocks:set_pof(AdjMicroBlock, PoF),
-            %%% add PoF
+            AddPoFToBlock = aec_blocks:set_pof(AdjMicroBlock, aec_pof:new(PoF)),
             {ok, SignedMicroBlock} = aec_keys:sign_micro_block(AddPoFToBlock),
             State1 = State#state{micro_block_candidate = undefined},
             case handle_signed_block(SignedMicroBlock, State1) of

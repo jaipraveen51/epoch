@@ -412,8 +412,7 @@ validate_key_block(#key_block{} = Block) ->
 
 -spec validate_micro_block(micro_block()) -> 'ok' | {'error', {'header' | 'block', term()}}.
 validate_micro_block(#mic_block{} = Block) ->
-    Validators = [fun validate_txs_hash/1,
-                  fun validate_pof/1],
+    Validators = [fun validate_txs_hash/1],
     case aec_headers:validate_micro_block_header(to_micro_header(Block)) of
         ok ->
             case aeu_validation:run(Validators, [Block]) of
@@ -433,7 +432,3 @@ validate_txs_hash(#mic_block{txs = Txs} = Block) ->
         _Other ->
             {error, malformed_txs_hash}
     end.
-
-validate_pof(#mic_block{txs = _Txs} = _Block) ->
-    %% TODO
-    ok.
