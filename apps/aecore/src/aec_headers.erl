@@ -313,6 +313,7 @@ serialize_to_map(#key_header{} = Header) ->
       <<"version">> => Header#key_header.version};
 serialize_to_map(#mic_header{} = Header) ->
     #{<<"height">> => Header#mic_header.height,
+      <<"pof">> => Header#mic_header.pof,
       <<"prev_hash">> => Header#mic_header.prev_hash,
       <<"signature">> => Header#mic_header.signature,
       <<"state_hash">> => Header#mic_header.root_hash,
@@ -349,6 +350,7 @@ deserialize_from_map(#{<<"height">> := Height,
                              version = Version}}
     end;
 deserialize_from_map(#{<<"height">> := Height,
+                       <<"pof">> := PoF,
                        <<"prev_hash">> := PrevHash,
                        <<"signature">> := Signature,
                        <<"state_hash">> := RootHash,
@@ -356,6 +358,7 @@ deserialize_from_map(#{<<"height">> := Height,
                        <<"time">> := Time,
                        <<"version">> := Version}) ->
     {ok, #mic_header{height = Height,
+                     pof = PoF,
                      prev_hash = PrevHash,
                      root_hash = RootHash,
                      signature = Signature,
@@ -390,13 +393,15 @@ serialize_to_binary(#key_header{} = Header) ->
       (Header#key_header.nonce):64,
       (Header#key_header.time):64>>;
 serialize_to_binary(#mic_header{} = Header) ->
+    PoF = serialize_pof_to_binary(Header#mic_header.pof),
     <<(Header#mic_header.version):64,
       (Header#mic_header.height):64,
       (Header#mic_header.prev_hash)/binary,
       (Header#mic_header.root_hash)/binary,
       (Header#mic_header.txs_hash)/binary,
       (Header#mic_header.time):64,
-      (Header#mic_header.signature)/binary>>.
+      (Header#mic_header.signature)/binary,
+      PoF/binary>>.
 
 -spec deserialize_from_binary(deterministic_header_binary()) -> header().
 
@@ -454,13 +459,15 @@ deserialize_micro_from_binary(<<Version:64,
                                 RootHash:?STATE_HASH_BYTES/binary,
                                 TxsHash:?TXS_HASH_BYTES/binary,
                                 Time:64,
-                                Signature:?BLOCK_SIGNATURE_BYTES/binary
+                                Signature:?BLOCK_SIGNATURE_BYTES/binary,
+                                PoFBin/binary
                               >>, Vsn) ->
     case (Vsn =:= any) orelse (Vsn =:= Version) of
         false ->
             {error, malformed_vsn};
         true ->
             H = #mic_header{height = Height,
+                            pof = deserialize_pof_from_binary(PoFBin),
                             prev_hash = PrevHash,
                             root_hash = RootHash,
                             signature = Signature,
@@ -500,6 +507,16 @@ deserialize_pow_evidence(L) when is_list(L) ->
     end;
 deserialize_pow_evidence(_) ->
     'no_value'.
+
+serialize_pof_to_binary(no_fraud) ->
+    <<>>;
+serialize_pof_to_binary(PoF) when is_map(PoF) ->
+    aec_pof:serialize_to_binary(PoF).
+
+deserialize_pof_from_binary(<<>>) ->
+    no_fraud;
+deserialize_pof_from_binary(PoFBin) ->
+    aec_pof:deserialize_from_binary(PoFBin).
 
 %%%===================================================================
 %%% Validation
