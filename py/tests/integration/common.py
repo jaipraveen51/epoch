@@ -207,16 +207,17 @@ def send_tokens_to_unchanging_user(address, tokens, fee, external_api, internal_
         return get_account_balance(external_api, internal_api, k).balance
     bal0 = get_balance(address)
     spend_tx_obj = SpendTx(
+        sender_id=_node_pub_key(internal_api),
         recipient_id=address,
         amount=tokens,
         fee=fee,
         ttl=100,
         payload="sending tokens")
-    internal_api.post_spend_tx(spend_tx_obj)
+    internal_api.post_spend(spend_tx_obj)
     wait(lambda: get_balance(address) == (bal0 + tokens),
-         timeout_seconds=120, sleep_seconds=0.25)
+         timeout_seconds=20, sleep_seconds=0.25)
 
-def _node_pub_key(int_api, k):
+def _node_pub_key(int_api, k=None):
     return k if k is not None else int_api.get_node_pubkey().pub_key
 
 def _balance_from_get_account(get_account_fun):

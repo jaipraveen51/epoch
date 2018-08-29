@@ -48,13 +48,14 @@ def test_not_enough_tokens():
 
     # Bob tries to send some tokens to Alice
     spend_tx_obj = SpendTx(
+        sender_id=bob_internal_api.get_node_pubkey().pub_key,
         recipient_id=test_settings["spend_tx"]["alice_pubkey"],
         amount=spend_tx_amt,
         fee=spend_tx_fee,
         ttl=100,
         payload="foo")
     print("Bob's spend_tx is " + str(spend_tx_obj))
-    bob_internal_api.post_spend_tx(spend_tx_obj)
+    bob_internal_api.post_spend(spend_tx_obj)
     print("Transaction sent")
     bob_top_after_tx = bob_api.get_top_block()
 
@@ -155,7 +156,7 @@ def miner_send_tokens(address, amount, internal_api, external_api):
         payload="sending tokens")
 
     # populate account
-    internal_api.post_spend_tx(spend_tx_obj)
+    internal_api.post_spend(spend_tx_obj)
 
     top = external_api.get_top_block()
     common.wait_until_height(external_api, top.height + 3)
