@@ -490,16 +490,18 @@ update_state_tree(Node, State) ->
     case get_state_trees_in(Node, State) of
         error -> State;
         {ok, Trees, ForkInfoIn} ->
-            {ForkInfo, HeadersDetails} =
+            {ForkInfo, MicSibHeaders} =
                 case node_is_genesis(Node, State) of
                     true  -> {ForkInfoIn, []};
                     false ->
-                        case db_sibling_blocks(Node) of
-                            Headers when length(Headers) > 1 -> {ForkInfoIn#fork_info{fork_id = hash(Node)}, Headers};
-                            Headers -> {ForkInfoIn, Headers}
+                        #{key_sibling := KeySib,
+                          micro_sibling := MicSib} = db_sibling_blocks(Node),
+                        case KeySib ++ MicSib of
+                            Headers when length(Headers) > 1 -> {ForkInfoIn#fork_info{fork_id = hash(Node)}, MicSib};
+                            Headers -> {ForkInfoIn, MicSib}
                         end
                 end,
-            State1 = check_for_fraud(Node, HeadersDetails, State),
+            State1 = check_for_fraud(Node, MicSibHeaders, State),
             {State2, NewTopDifficulty} =
                 update_state_tree(Node, Trees, ForkInfo, State1),
             OldTopHash = get_top_block_hash(State),
@@ -926,19 +928,19 @@ db_children(#node{} = Node) ->
             ++ aec_db:find_headers_at_height(Height),
         aec_headers:prev_hash(Header) =:= Hash].
 
-db_sibling_blocks(Node) ->
+db_sibling_blocks(#node{type = key} = Node) ->
     Height   = node_height(Node),
     PrevHash = prev_hash(Node),
-    %% NOTE: Micro blocks have the same height.
-    %% For key blocks siblings at Height and Height - 1
-    %% and for micro blocks siblings at Height and Height + 1
-    OtherHeight =
-        case node_type(Node) of
-            micro -> Height + 1;
-            key   -> Height - 1
-        end,
-    [Header || Header <- aec_db:find_headers_at_height(Height)
-                   ++ aec_db:find_headers_at_height(OtherHeight),
+    #{ key_sibling => match_prev_at_height(Height, PrevHash),
+       micro_sibling => match_prev_at_height(Height-1, PrevHash)};
+db_sibling_blocks(#node{type = micro} = Node) ->
+    Height   = node_height(Node),
+    PrevHash = prev_hash(Node),
+    #{ key_sibling => match_prev_at_height(Height+1, PrevHash),
+       micro_sibling => match_prev_at_height(Height, PrevHash)}.
+
+match_prev_at_height(Height, PrevHash) ->
+    [Header || Header <- aec_db:find_headers_at_height(Height),
                aec_headers:prev_hash(Header) =:= PrevHash].
 
 db_mark_malicious_leader(#node{header = Header}) ->
