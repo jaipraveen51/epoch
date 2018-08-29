@@ -184,7 +184,7 @@ ct_cleanup(Ctx) ->
     wait_for_exit(Pid, ?CALL_TIMEOUT),
     case Result of
         {error, Reason} ->
-            %% returning fail will cause common test to see it as test failure 
+            %% returning fail will cause common test to see it as test failure
             {fail, Reason};
         ok -> ok
     end.
@@ -321,6 +321,7 @@ spec(Name, Peers, Spec) ->
 request(Node, Id, Params) ->
     aehttp_client:request(Id, Params, [
         {ext_http, aest_nodes_mgr:get_service_address(Node, ext_http)},
+        {int_http, aest_nodes_mgr:get_service_address(Node, int_http)},
         {ct_log, true}
     ]).
 
